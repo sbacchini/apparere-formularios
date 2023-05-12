@@ -120,7 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit();
   }
 }
-?>
+
+$html = <<<HTML
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -129,7 +130,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Regulamento - Coletânea A Força</title>
-  <link rel="stylesheet" href="https://unpkg.com/tailwindcss@latest/dist/tailwind.min.css">
+  <link href="./dist/output.css" rel="stylesheet">
+
 </head>
 
 <body>
@@ -142,77 +144,86 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           </div>
         </div>
       </div>
-      <form class="mt-8 space-y-6" action="send-to-db.php" method="POST">
+      <form class="mt-8 space-y-6" action="#" method="POST">
         <input type="hidden" name="remember" value="true">
         <div class="rounded-md shadow-sm -space-y-px">
           <div>
             <label for="nome" class="sr-only">Nome</label>
-            <input id="nome" name="nome" type="text" value="<?php echo htmlspecialchars($_POST['nome'] ?? '', ENT_QUOTES); ?>" autocomplete="name" required class="input <?php echo $nome_err ? 'input--error' : ''; ?>" placeholder="Nome completo">
+
+            <input id="nome" name="nome" type="text" autocomplete="nome" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Nome" value="$nome">
             <?php if ($nome_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $nome_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $nome_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
-            <label for="email" class="sr-only">E-mail</label>
-            <input id="email" name="email" type="email" value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES); ?>" autocomplete="email" required class="input <?php echo $email_err ? 'input--error' : ''; ?>" placeholder="E-mail">
+            <label for="email" class="sr-only">Email</label>
+
+            <input id="email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" value="$email">
             <?php if ($email_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $email_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $email_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
             <label for="telefone" class="sr-only">Telefone</label>
-            <input id="telefone" name="telefone" type="tel" value="<?php echo htmlspecialchars($_POST['telefone'] ?? '', ENT_QUOTES); ?>" autocomplete="tel" required class="input <?php echo $telefone_err ? 'input--error' : ''; ?>" placeholder="Telefone">
+            <input id="telefone" name="telefone" type="tel" autocomplete="tel" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Telefone" value="$telefone">
             <?php if ($telefone_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $telefone_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $telefone_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
             <label for="endereco" class="sr-only">Endereço</label>
-            <input id="endereco" name="endereco" type="text" value="<?php echo htmlspecialchars($_POST['endereco'] ?? '', ENT_QUOTES); ?>" autocomplete="address-line1" required class="input <?php echo $endereco_err ? 'input--error' : ''; ?>" placeholder="Endereço completo">
+            <input id="endereco" name="endereco" type="text" autocomplete="endereco" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Endereço" value="$endereco">
             <?php if ($endereco_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $endereco_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $endereco_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
             <label for="cidade" class="sr-only">Cidade</label>
-            <input id="cidade" name="cidade" type="text" value="<?php echo htmlspecialchars($_POST['cidade'] ?? '', ENT_QUOTES); ?>" autocomplete="address-level2" required class="input <?php echo $cidade_err ? 'input--error' : ''; ?>" placeholder="Cidade">
+            <input id="cidade" name="cidade" type="text" autocomplete="cidade" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Cidade" value="$cidade">
             <?php if ($cidade_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $cidade_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $cidade_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
             <label for="estado" class="sr-only">Estado</label>
-            <select id="estado" name="estado" required class="input <?php echo $estado_err ? 'input--error'    : ''; ?>">
-              <option value="">Selecione o estado</option>
-              <?php foreach ($estados as $estado) : ?>
-                <option value="<?php echo $estado; ?>" <?php echo isset($_POST['estado']) && $_POST['estado'] === $estado ? 'selected' : ''; ?>><?php echo $estado; ?></option>
-              <?php endforeach; ?>
-            </select>
+            <input id="estado" name="estado" type="text" autocomplete="estado" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Estado" value="$estado">
             <?php if ($estado_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $estado_err; ?></p>
+              <p class="text-red-500 mt-1">
+                <?php echo $estado_err; ?>
+              </p>
             <?php endif; ?>
           </div>
           <div>
-            <label for="mensagem" class="sr-only">Mensagem</label>
-            <textarea id="mensagem" name="mensagem" rows="4" required class="input <?php echo $mensagem_err ? 'input--error' : ''; ?>" placeholder="Mensagem"><?php echo htmlspecialchars($_POST['mensagem'] ?? '', ENT_QUOTES); ?></textarea>
-            <?php if ($mensagem_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $mensagem_err; ?></p>
+            <label for="titulo" class="sr-only">Título</label>
+            <input id="titulo" name="titulo" type="text" autocomplete="titulo" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Título" value="$titulo">
+            <?php if ($titulo_err) : ?>
+              <p class="text-red-500 mt-1">
+                <?php echo $titulo_err; ?>
+              </p>
             <?php endif; ?>
           </div>
-        </div>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <input id="aceite" name="aceite" type="checkbox" class="checkbox" required>
-            <label for="aceite" class="ml-2">
-              Li e concordo com o <a href="#" class="link">regulamento</a>
-            </label>
-            <?php if ($aceite_err) : ?>
-              <p class="text-red-500 mt-1"><?php echo $aceite_err; ?></p>
+          <div>
+            <label for="descricao" class="sr-only">Descrição</label>
+            <textarea id="descricao" name="descricao" type="text" autocomplete="descricao" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Descrição" value="$descricao"></textarea>
+            <?php if ($descricao_err) : ?>
+              <p class="text-red-500 mt-1">
+                <?php echo $descricao_err; ?>
+              </p>
             <?php endif; ?>
           </div>
-          <button type="submit" class="button">
-            Enviar
-          </button>
+          <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent rounded-md font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Enviar inscrição
+        </button>
         </div>
       </form>
 
@@ -222,3 +233,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </body>
 
 </html>
+HTML;
+echo $html;
