@@ -4,8 +4,9 @@ $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
 // Initialize variables with empty values
-$nome = $email = $telefone = $endereco = $cidade = $estado = $titulo = $descricao = "";
-$nome_err = $email_err = $telefone_err = $endereco_err = $cidade_err = $estado_err = $titulo_err = $descricao_err = "";
+
+$nome = $email = $data_nascimento = $cpf = $curriculo = $arquivo = $aceite = "";
+$nome_err = $email_err = $data_nascimento_err = $cpf_err = $curriculo_err = $arquivo_err = $aceite_err = "";
 
 // Define a function to sanitize form input
 function test_input($data)
@@ -16,8 +17,20 @@ function test_input($data)
   return $data;
 }
 
+$inscricoes_encerradas = false;
+$inscricoes_data_limite = '2023-06-01'; // change to your desired date
+
+if (date('Y-m-d') > $inscricoes_data_limite) {
+  $inscricoes_encerradas = true;
+}
+
+
 // Process form data when the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  if ($inscricoes_encerradas) {
+    // Display a message if form submissions are closed
+    echo '<p class="text-red-500 mt-1">Inscrições encerradas.</p>';
+  } else {
   // Validate Nome
   if (empty($_POST["nome"])) {
     $nome_err = "O campo Nome é obrigatório";
@@ -40,55 +53,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
   }
 
-  // Validate Telefone
-  if (empty($_POST["telefone"])) {
-    $telefone_err = "O campo Telefone é obrigatório";
+  // Validate birth date
+  if (empty($_POST["data_nascimento"])) {
+    $data_nascimento_err = "O campo Data de Nascimento é obrigatório";
   } else {
-    $telefone = test_input($_POST["telefone"]);
-    // Check if telefone is well-formed
-    if (!preg_match("/^[0-9]{10,11}$/", $telefone)) {
-      $telefone_err = "O campo Telefone deve ter 10 ou 11 dígitos numéricos";
+    $data_nascimento = test_input($_POST["data_nascimento"]);
+    // Check if date is in valid format
+    if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $data_nascimento)) {
+      $data_nascimento_err = "O campo Data de Nascimento não é válido";
     }
   }
 
-  // Validate Endereço
-  if (empty($_POST["endereco"])) {
-    $endereco_err = "O campo Endereço é obrigatório";
+
+  // Validate CPF
+  if (empty($_POST["cpf"])) {
+    $cpf_err = "O campo CPF é obrigatório";
   } else {
-    $endereco = test_input($_POST["endereco"]);
+    $cpf = test_input($_POST["cpf"]);
+    // Check if CPF is valid
+    if (!preg_match("/^\d{3}\.\d{3}\.\d{3}\-\d{2}$/", $cpf)) {
+      $cpf_err = "O campo CPF não é válido";
+    }
   }
 
-  // Validate Cidade
-  if (empty($_POST["cidade"])) {
-    $cidade_err = "O campo Cidade é obrigatório";
+
+  // Validade Currículo, and avoid any sql injections or security risks
+  if (empty($_POST["curriculo"])) {
+    $curriculo_err = "O campo Currículo é obrigatório";
   } else {
-    $cidade = test_input($_POST["cidade"]);
+    $curriculo = test_input($_POST["curriculo"]);
   }
+  
 
-  // Validate Estado
-  if (empty($_POST["estado"])) {
-    $estado_err = "O campo Estado é obrigatório";
+
+
+  // Validate file input, verify it's a word, rtf, or txt file, and rename it to the format "nome_cpf_data_nascimento.docx"
+  if (empty($_FILES["arquivo"]["name"])) {
+    $arquivo_err = "O campo Arquivo é obrigatório";
   } else {
-    $estado = test_input($_POST["estado"]);
+    $arquivo = test_input($_FILES["arquivo"]["name"]);
+    $fileType = strtolower(pathinfo($arquivo, PATHINFO_EXTENSION));
+    if ($fileType != "docx" && $fileType != "doc" && $fileType != "rtf" && $fileType != "txt") {
+      $arquivo_err = "O campo Arquivo só pode conter arquivos nos formatos .docx, .rtf ou .txt";
+    } else {
+      // if filesize is greater than 5mb, return an error
+      if ($_FILES["arquivo"]["size"] > 5000000) {
+        $arquivo_err = "O arquivo não pode ser maior que 5MB";
+      } else {
+      $arquivo = $nome . "_" . $cpf . "_" . $data_nascimento . "." . $fileType;
+    }
   }
-
-  // Validate Título
-  if (empty($_POST["titulo"])) {
-    $titulo_err = "O campo Título da obra é obrigatório";
-  } else {
-    $titulo = test_input($_POST["titulo"]);
   }
-
-  // Validate Descrição
-  if (empty($_POST["descricao"])) {
-    $descricao_err = "O campo Descrição da obra é obrigatório";
-  } else {
-    $descricao = test_input($_POST["descricao"]);
-  }
-
-  // Validate file input
-
-  // Validate rules acceptance
+    // Validate rules acceptance
   if (empty($_POST["aceite"])) {
     $$aceite_err = '';
     if (!isset($_POST['aceite'])) {
@@ -98,8 +114,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
   }
 
-  // If there are no errors, send form data to database
-  if (empty($nome_err) && empty($email_err) && empty($telefone_err) && empty($endereco_err) && empty($cidade_err) && empty($estado_err) && empty($titulo_err) && empty($descricao_err)) {
+  // Validate "I didn't use AI to create this file" checkbox
+  if (empty($_POST["nao_foi_usado_ai"])) {
+    $nao_foi_usado_ai_err = '';
+    if (!isset($_POST['nao_foi_usado_ai'])) {
+      $nao_foi_usado_ai_err = 'Você precisa concordar que não usou inteligência artificial para criar o texto.';
+    } else {
+      $nao_foi_usado_ai = test_input($_POST["nao_foi_usado_ai"]);
+    }
+  }
+  
+  
+
+  // If there are no errors, and $inscricoes_encerradas is not true, send form data to database
+  if (empty($nome_err) && empty($email_err) && empty($data_nascimento_err) && empty($cpf_err) && empty($curriculo_err) && empty($arquivo_err) && empty($aceite_err) && empty($nao_foi_usado_ai_err) && !$inscricoes_encerradas) {
+    
     // Create connection
     $conn = new mysqli($_ENV['DB_HOST'], $_ENV['DB_USER'], $_ENV['DB_PASS'], $_ENV['DB_NAME']);
 
@@ -109,16 +138,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Prepare and bind parameters to insert into database
-    $stmt = $conn->prepare("INSERT INTO inscricoes (nome, email, telefone, endereco, cidade, estado, titulo, descricao) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssss", $nome, $email, $telefone, $endereco, $cidade, $estado, $titulo, $descricao);
+    $stmt = $conn->prepare("INSERT INTO inscricoes (nome, email, data_nascimento, cpf, curriculo, arquivo) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssss", $nome, $email, $data_nascimento, $cpf, $curriculo, $arquivo);
     $stmt->execute();
     $stmt->close();
     $conn->close();
-
+    
     // Redirect to success page
     header("Location: success.php");
     exit();
   }
+}
 }
 
 $html = <<<HTML
@@ -144,88 +174,193 @@ $html = <<<HTML
           </div>
         </div>
       </div>
-      <form class="mt-8 space-y-6" action="#" method="POST">
-        <input type="hidden" name="remember" value="true">
-        <div class="rounded-md shadow-sm -space-y-px">
-          <div>
-            <label for="nome" class="sr-only">Nome</label>
+      <form class="mt-10" action="textos.php" method="post">
+  <div class="space-y-12">
+    <div class="border-b border-gray-900/10 pb-12">
+      <h2 class="text-base font-semibold leading-7 text-gray-900">Profile</h2>
+      <p class="mt-1 text-sm leading-6 text-gray-600">This information will be displayed publicly so be careful what you share.</p>
 
-            <input id="nome" name="nome" type="text" autocomplete="nome" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Nome" value="$nome">
-            <?php if ($nome_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $nome_err; ?>
-              </p>
-            <?php endif; ?>
+      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <div class="sm:col-span-4">
+          <label for="username" class="block text-sm font-medium leading-6 text-gray-900">Username</label>
+          <div class="mt-2">
+            <div class="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-600 sm:max-w-md">
+              <span class="flex select-none items-center pl-3 text-gray-500 sm:text-sm">workcation.com/</span>
+              <input type="text" name="username" id="username" autocomplete="username" class="block flex-1 border-0 bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6" placeholder="janesmith">
+            </div>
           </div>
-          <div>
-            <label for="email" class="sr-only">Email</label>
-
-            <input id="email" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email" value="$email">
-            <?php if ($email_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $email_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="telefone" class="sr-only">Telefone</label>
-            <input id="telefone" name="telefone" type="tel" autocomplete="tel" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Telefone" value="$telefone">
-            <?php if ($telefone_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $telefone_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="endereco" class="sr-only">Endereço</label>
-            <input id="endereco" name="endereco" type="text" autocomplete="endereco" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Endereço" value="$endereco">
-            <?php if ($endereco_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $endereco_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="cidade" class="sr-only">Cidade</label>
-            <input id="cidade" name="cidade" type="text" autocomplete="cidade" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Cidade" value="$cidade">
-            <?php if ($cidade_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $cidade_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="estado" class="sr-only">Estado</label>
-            <input id="estado" name="estado" type="text" autocomplete="estado" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Estado" value="$estado">
-            <?php if ($estado_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $estado_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="titulo" class="sr-only">Título</label>
-            <input id="titulo" name="titulo" type="text" autocomplete="titulo" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Título" value="$titulo">
-            <?php if ($titulo_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $titulo_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <div>
-            <label for="descricao" class="sr-only">Descrição</label>
-            <textarea id="descricao" name="descricao" type="text" autocomplete="descricao" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Descrição" value="$descricao"></textarea>
-            <?php if ($descricao_err) : ?>
-              <p class="text-red-500 mt-1">
-                <?php echo $descricao_err; ?>
-              </p>
-            <?php endif; ?>
-          </div>
-          <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent rounded-md font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          Enviar inscrição
-        </button>
         </div>
-      </form>
+
+        <div class="col-span-full">
+          <label for="about" class="block text-sm font-medium leading-6 text-gray-900">About</label>
+          <div class="mt-2">
+            <textarea id="about" name="about" rows="3" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"></textarea>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-gray-600">Write a few sentences about yourself.</p>
+        </div>
+
+        <div class="col-span-full">
+          <label for="photo" class="block text-sm font-medium leading-6 text-gray-900">Photo</label>
+          <div class="mt-2 flex items-center gap-x-3">
+            <svg class="h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
+            </svg>
+            <button type="button" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Change</button>
+          </div>
+        </div>
+
+        <div class="col-span-full">
+          <label for="cover-photo" class="block text-sm font-medium leading-6 text-gray-900">Cover photo</label>
+          <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 text-gray-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" />
+              </svg>
+              <div class="mt-4 flex text-sm leading-6 text-gray-600">
+                <label for="file-upload" class="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
+                  <span>Upload a file</span>
+                  <input id="file-upload" name="file-upload" type="file" class="sr-only">
+                </label>
+                <p class="pl-1">or drag and drop</p>
+              </div>
+              <p class="text-xs leading-5 text-gray-600">PNG, JPG, GIF up to 10MB</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-b border-gray-900/10 pb-12">
+      <h2 class="text-base font-semibold leading-7 text-gray-900">Personal Information</h2>
+      <p class="mt-1 text-sm leading-6 text-gray-600">Use a permanent address where you can receive mail.</p>
+
+      <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+        <div class="sm:col-span-3">
+          <label for="first-name" class="block text-sm font-medium leading-6 text-gray-900">First name</label>
+          <div class="mt-2">
+            <input type="text" name="first-name" id="first-name" autocomplete="given-name" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="last-name" class="block text-sm font-medium leading-6 text-gray-900">Last name</label>
+          <div class="mt-2">
+            <input type="text" name="last-name" id="last-name" autocomplete="family-name" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-4">
+          <label for="email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>
+          <div class="mt-2">
+            <input id="email" name="email" type="email" autocomplete="email" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="country" class="block text-sm font-medium leading-6 text-gray-900">Country</label>
+          <div class="mt-2">
+            <select id="country" name="country" autocomplete="country-name" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
+              <option>United States</option>
+              <option>Canada</option>
+              <option>Mexico</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-span-full">
+          <label for="street-address" class="block text-sm font-medium leading-6 text-gray-900">Street address</label>
+          <div class="mt-2">
+            <input type="text" name="street-address" id="street-address" autocomplete="street-address" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-2 sm:col-start-1">
+          <label for="city" class="block text-sm font-medium leading-6 text-gray-900">City</label>
+          <div class="mt-2">
+            <input type="text" name="city" id="city" autocomplete="address-level2" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-2">
+          <label for="region" class="block text-sm font-medium leading-6 text-gray-900">State / Province</label>
+          <div class="mt-2">
+            <input type="text" name="region" id="region" autocomplete="address-level1" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+
+        <div class="sm:col-span-2">
+          <label for="postal-code" class="block text-sm font-medium leading-6 text-gray-900">ZIP / Postal code</label>
+          <div class="mt-2">
+            <input type="text" name="postal-code" id="postal-code" autocomplete="postal-code" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-b border-gray-900/10 pb-12">
+      <h2 class="text-base font-semibold leading-7 text-gray-900">Notifications</h2>
+      <p class="mt-1 text-sm leading-6 text-gray-600">We'll always let you know about important changes, but you pick what else you want to hear about.</p>
+
+      <div class="mt-10 space-y-10">
+        <fieldset>
+          <legend class="text-sm font-semibold leading-6 text-gray-900">By Email</legend>
+          <div class="mt-6 space-y-6">
+            <div class="relative flex gap-x-3">
+              <div class="flex h-6 items-center">
+                <input id="comments" name="comments" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              </div>
+              <div class="text-sm leading-6">
+                <label for="comments" class="font-medium text-gray-900">Comments</label>
+                <p class="text-gray-500">Get notified when someones posts a comment on a posting.</p>
+              </div>
+            </div>
+            <div class="relative flex gap-x-3">
+              <div class="flex h-6 items-center">
+                <input id="candidates" name="candidates" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              </div>
+              <div class="text-sm leading-6">
+                <label for="candidates" class="font-medium text-gray-900">Candidates</label>
+                <p class="text-gray-500">Get notified when a candidate applies for a job.</p>
+              </div>
+            </div>
+            <div class="relative flex gap-x-3">
+              <div class="flex h-6 items-center">
+                <input id="offers" name="offers" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              </div>
+              <div class="text-sm leading-6">
+                <label for="offers" class="font-medium text-gray-900">Offers</label>
+                <p class="text-gray-500">Get notified when a candidate accepts or rejects an offer.</p>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend class="text-sm font-semibold leading-6 text-gray-900">Push Notifications</legend>
+          <p class="mt-1 text-sm leading-6 text-gray-600">These are delivered via SMS to your mobile phone.</p>
+          <div class="mt-6 space-y-6">
+            <div class="flex items-center gap-x-3">
+              <input id="push-everything" name="push-notifications" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              <label for="push-everything" class="block text-sm font-medium leading-6 text-gray-900">Everything</label>
+            </div>
+            <div class="flex items-center gap-x-3">
+              <input id="push-email" name="push-notifications" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              <label for="push-email" class="block text-sm font-medium leading-6 text-gray-900">Same as email</label>
+            </div>
+            <div class="flex items-center gap-x-3">
+              <input id="push-nothing" name="push-notifications" type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+              <label for="push-nothing" class="block text-sm font-medium leading-6 text-gray-900">No push notifications</label>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 flex items-center justify-end gap-x-6">
+    <button type="button" class="text-sm font-semibold leading-6 text-gray-900">Cancel</button>
+    <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Save</button>
+  </div>
+</form>
 
 
     </div>
